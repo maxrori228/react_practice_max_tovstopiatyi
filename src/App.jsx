@@ -1,8 +1,7 @@
 /* eslint-disable jsx-a11y/accessible-emoji */
-import React from 'react';
+import React, { useState } from 'react';
 import './App.scss';
 
-import { useState } from 'react';
 import usersFromServer from './api/users';
 import categoriesFromServer from './api/categories';
 import productsFromServer from './api/products';
@@ -11,14 +10,23 @@ export const App = () => {
   const [selectedUserId, setSelectedUserId] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategories, setSelectedCategories] = useState([]);
-  const [sortConfig, setSortConfig] = useState('');
+  const [sortConfig, setSortConfig] = useState({
+    column: null,
+    direction: null,
+  });
 
   const products = productsFromServer.map(product => {
     const category = categoriesFromServer.find(
       c => c.id === product.categoryId,
     );
     const user = usersFromServer.find(u => u.id === category.ownerId);
-    const userClass = user.sex === 'male' ? 'has-text-link' : 'has-text-danger';
+    let userClass = '';
+
+    if (user.sex === 'm') {
+      userClass = 'has-text-link';
+    } else if (user.sex === 'f') {
+      userClass = 'has-text-danger';
+    }
 
     return {
       id: product.id,
@@ -47,9 +55,9 @@ export const App = () => {
     setSelectedCategories(prev => {
       if (prev.includes(categoryId)) {
         return prev.filter(id => id !== categoryId);
-      } else {
-        return [...prev, categoryId];
       }
+
+      return [...prev, categoryId];
     });
   };
 
@@ -67,20 +75,43 @@ export const App = () => {
       : visibleProducts;
 
   const onSort = column => {
-    setSortConfig(prev => (prev === column ? null : column));
+    setSortConfig(prev => {
+      if (prev.column !== column) {
+        return { column, direction: 'asc' };
+      }
+
+      if (prev.direction === 'asc') {
+        return { column, direction: 'desc' };
+      }
+
+      return { column: null, direction: null };
+    });
   };
 
-  const sortedProducts = sortConfig
+  const sortedProducts = sortConfig.column
     ? [...filteredByCategories].sort((a, b) => {
-        const aVal = a[sortConfig];
-        const bVal = b[sortConfig];
+        const aVal = a[sortConfig.column];
+        const bVal = b[sortConfig.column];
+
+        let result;
 
         if (typeof aVal === 'string') {
-          return aVal.localeCompare(bVal);
+          result = aVal.localeCompare(bVal);
+        } else {
+          result = aVal - bVal;
         }
-        return aVal - bVal;
+
+        return sortConfig.direction === 'desc' ? -result : result;
       })
     : filteredByCategories;
+
+  const getSortIconClass = column => {
+    if (sortConfig.column !== column) return 'fas fa-sort';
+
+    return sortConfig.direction === 'asc'
+      ? 'fas fa-sort-up'
+      : 'fas fa-sort-down';
+  };
 
   return (
     <div className="section">
@@ -195,7 +226,10 @@ export const App = () => {
                       ID
                       <a href="#/">
                         <span className="icon">
-                          <i data-cy="SortIcon" className="fas fa-sort" />
+                          <i
+                            data-cy="SortIcon"
+                            className={getSortIconClass('id')}
+                          />
                         </span>
                       </a>
                     </span>
@@ -206,7 +240,10 @@ export const App = () => {
                       Product
                       <a href="#/">
                         <span className="icon">
-                          <i data-cy="SortIcon" className="fas fa-sort-down" />
+                          <i
+                            data-cy="SortIcon"
+                            className={getSortIconClass('name')}
+                          />
                         </span>
                       </a>
                     </span>
@@ -217,7 +254,10 @@ export const App = () => {
                       Category
                       <a href="#/">
                         <span className="icon">
-                          <i data-cy="SortIcon" className="fas fa-sort-up" />
+                          <i
+                            data-cy="SortIcon"
+                            className={getSortIconClass('categoryTitle')}
+                          />
                         </span>
                       </a>
                     </span>
@@ -228,7 +268,10 @@ export const App = () => {
                       User
                       <a href="#/">
                         <span className="icon">
-                          <i data-cy="SortIcon" className="fas fa-sort" />
+                          <i
+                            data-cy="SortIcon"
+                            className={getSortIconClass('userName')}
+                          />
                         </span>
                       </a>
                     </span>
